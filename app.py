@@ -2,6 +2,7 @@ import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLabel, QFileDialog, QTextEdit, QDialog, QComboBox, QCheckBox
 import os
 from analyze import *
+from syntax_tree import *
 
 class WelcomeScreen(QWidget):
     def __init__(self):
