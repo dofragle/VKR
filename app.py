@@ -1,5 +1,5 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLabel, QFileDialog, QTextEdit, QDialog, QComboBox
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLabel, QFileDialog, QTextEdit, QDialog, QComboBox, QCheckBox
 import os
 from analyze import *
 
@@ -103,10 +103,19 @@ class FileContentScreen(QWidget):
         self.analysis_method_combo = QComboBox()
         self.analysis_method_combo.addItem("spacy_udpipe")
         self.analysis_method_combo.addItem("Natasha")
-        self.analysis_method_combo.addItem("MaltParser")
         self.analysis_method_combo.addItem("DeepPavlov")
         self.analysis_method_combo.addItem("Stanza")
         layout.addWidget(self.analysis_method_combo)
+
+        self.save_conll_checkbox = QCheckBox('Сохранить файл .conll')
+        layout.addWidget(self.save_conll_checkbox)
+
+        self.conll_file_path_label = QLabel('')
+        layout.addWidget(self.conll_file_path_label)
+
+        self.conll_file_path_button = QPushButton('Выбрать место сохранения')
+        self.conll_file_path_button.clicked.connect(self.choose_conll_file_path)
+        layout.addWidget(self.conll_file_path_button)
 
         self.analyze_button = QPushButton('Анализировать')
         self.analyze_button.clicked.connect(self.analyze_and_show_result)
@@ -116,18 +125,21 @@ class FileContentScreen(QWidget):
         self.back_button.clicked.connect(self.go_back)
         layout.addWidget(self.back_button)
 
+    def choose_conll_file_path(self):
+        conll_file_path, _ = QFileDialog.getSaveFileName(self, 'Выберите место сохранения', '.', 'CONLL files (*.conll)')
+        if conll_file_path:
+            self.conll_file_path_label.setText(conll_file_path)
+
     def analyze_and_show_result(self):
         content = self.text_edit.toPlainText()
         analysis_method = self.analysis_method_combo.currentText()
 
-        if content.strip():  
+        if content.strip():
             try:
                 if analysis_method == "spacy_udpipe":
                     analyzed_content = analyze_sentences(content)
                 elif analysis_method == "Natasha":
                     analyzed_content = analyze_with_natasha(content)
-                elif analysis_method == "MaltParser":
-                    analyzed_content = analyze_with_maltparser(content)
                 elif analysis_method == "DeepPavlov":
                     analyzed_content = analyze_with_deeppavlov(content)
                 elif analysis_method == "Stanza":
@@ -135,39 +147,24 @@ class FileContentScreen(QWidget):
                 else:
                     raise ValueError("Неверный метод анализа выбран")
                 
-                result_dialog = ResultDialog(analyzed_content)
-                result_dialog.exec_()
+                if self.save_conll_checkbox.isChecked():
+                    conll_file_path = self.conll_file_path_label.text()
+                    self.save_to_conll(analyzed_content, conll_file_path)
+
             except Exception as e:
                 print("Ошибка при анализе предложений:", e)
         else:
             print("Пустой текст для анализа.")
+        show_result(analyzed_content)
 
     def go_back(self):
         self.prev_screen = FileInputScreen()
         self.prev_screen.show()
         self.close()
-
-
-
-class ResultDialog(QDialog):
-    def __init__(self, result):
-        super().__init__()
-        self.result = result
-        self.initUI()
-
-    def initUI(self):
-        self.setWindowTitle('Результат анализа')
-        self.setFixedSize(800, 600)  # Установка фиксированного размера
-        layout = QVBoxLayout(self)
-
-        # Преобразуем список результатов в строку
-        result_str = "\n".join([f"Токен: {token}, Тип связи: {dep_type}, Слово-родитель: {parent_word}" for token, dep_type, parent_word in self.result])
-
-        self.result_label = QLabel(result_str)
-        layout.addWidget(self.result_label)
-
-        self.ok_button = QPushButton('OK')
-        self.ok_button.clicked.connect(self.close)
-        layout.addWidget(self.ok_button)
-
-        self.setLayout(layout)
+        
+    def save_to_conll(self, analyzed_content, file_path):
+        try:
+            with open(file_path, 'w', encoding='utf-8') as conll_file:
+                    conll_file.write(analyzed_content[0])
+        except Exception as e:
+            print("Ошибка при сохранении в формат .conll:", e)
