@@ -54,3 +54,5 @@ def show_result(conllu_string):
     # Определение уровней вершин
     levels = nx.shortest_path_length(G, source=root_id)
     for node, level in levels.items():
+        G.nodes[node]["level"] = level
+    draw_dependency_tree(G)
